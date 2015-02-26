@@ -145,7 +145,6 @@ public class DissectorHandler implements IListenDataPacket {
         }
     }
     
-    @Override
     public PacketResult receiveDataPacket(RawPacket inPkt) {
         // The connector, the packet came from ("port")
         NodeConnector ingressConnector = inPkt.getIncomingNodeConnector();
@@ -160,20 +159,24 @@ public class DissectorHandler implements IListenDataPacket {
         if (pkt instanceof Ethernet) {
             Ethernet ethFrame = (Ethernet) pkt;
             Object l3Pkt = ethFrame.getPayload();
+	    //log.info("Payload de ethernet "+l3Pkt);
          
             if (l3Pkt instanceof IPv4) {
                 IPv4 ipv4Pkt = (IPv4) l3Pkt;
                 InetAddress clientAddr = intToInetAddress(ipv4Pkt.getSourceAddress());
                 InetAddress dstAddr = intToInetAddress(ipv4Pkt.getDestinationAddress());
                 Object l4Datagram = ipv4Pkt.getPayload();
-                
                 if (l4Datagram instanceof TCP) {
                     TCP tcpDatagram = (TCP) l4Datagram;
                     int clientPort = tcpDatagram.getSourcePort();
                     int dstPort = tcpDatagram.getDestinationPort();
-                    Object tcpPkt = tcpDatagram.getPayload();
-		    log.info("Payload de TCP "+tcpPkt);
-                    if (publicInetAddress.equals(dstAddr) /*&& dstPort == SERVICE_PORT*/) { // para detectar el string de TCP no necesitamos que vaya al puerto 7777
+                    String tcpinteresante = tcpDatagram.toString();
+                    //log.info("Datagrama TCP "+tcpinteresante);
+                    String tcp2 = tcpDatagram.DATAOFFSET;
+                    //log.info("Data offset "+tcp2);
+                    
+
+                    if (publicInetAddress.equals(dstAddr) && dstPort == SERVICE_PORT) { 
                         log.info("Received packet for load balanced service");
                         
                         // Select one of the two servers round robin.

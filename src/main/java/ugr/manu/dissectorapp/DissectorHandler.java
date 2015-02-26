@@ -2,8 +2,16 @@ package ugr.manu.dissectorapp;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+//import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.io.UnsupportedEncodingException;
+import java.lang.Object;
+import java.lang.Enum;
 
 import org.opendaylight.controller.sal.action.Action;
 import org.opendaylight.controller.sal.action.Output;
@@ -11,13 +19,16 @@ import org.opendaylight.controller.sal.action.SetDlDst;
 import org.opendaylight.controller.sal.action.SetDlSrc;
 import org.opendaylight.controller.sal.action.SetNwDst;
 import org.opendaylight.controller.sal.action.SetNwSrc;
+import org.opendaylight.controller.sal.action.SetNwTos;
 import org.opendaylight.controller.sal.core.ConstructionException;
 import org.opendaylight.controller.sal.core.Node;
 import org.opendaylight.controller.sal.core.NodeConnector;
 import org.opendaylight.controller.sal.flowprogrammer.Flow;
 import org.opendaylight.controller.sal.flowprogrammer.IFlowProgrammerService;
 import org.opendaylight.controller.sal.match.Match;
+import org.opendaylight.controller.sal.match.MatchField;
 import org.opendaylight.controller.sal.match.MatchType;
+import org.opendaylight.controller.sal.packet.BitBufferHelper;
 import org.opendaylight.controller.sal.packet.Ethernet;
 import org.opendaylight.controller.sal.packet.IDataPacketService;
 import org.opendaylight.controller.sal.packet.IListenDataPacket;
@@ -29,30 +40,63 @@ import org.opendaylight.controller.sal.packet.TCP;
 import org.opendaylight.controller.sal.utils.EtherTypes;
 import org.opendaylight.controller.sal.utils.Status;
 import org.opendaylight.controller.switchmanager.ISwitchManager;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleException;
+import org.osgi.framework.FrameworkUtil;
+import org.projectfloodlight.openflow.protocol.match.MatchFields;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+//////
+//import org.opendaylight.controller.protocol_plugin.openflow.IDataPacketListen;
+//import org.opendaylight.controller.protocol_plugin.openflow.core.IMessageListener;
 
+import org.opendaylight.controller.sal.packet.UDP;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.address.address.Ipv4;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflow.oxm.rev130731.Ipv4Dst;
+
+import aQute.bnd.service.diff.Tree.Data;
+
+//import org.opendaylight.controller.
+import static java.nio.charset.StandardCharsets.*;
+/*
+import org.openflow.protocol.OFFlowMod;
+import org.openflow.protocol.OFMatch;
+import org.openflow.protocol.OFMessage;
+import org.openflow.protocol.OFPacketIn;
+import org.openflow.protocol.OFPacketOut;
+import org.openflow.protocol.OFPort;
+import org.openflow.protocol.OFType;
+import org.openflow.protocol.action.OFAction;
+import org.openflow.protocol.action.OFActionOutput;
+import org.openflow.util.U16;
+*/
+//////
 public class DissectorHandler implements IListenDataPacket {
     
     private static final Logger log = LoggerFactory.getLogger(DissectorHandler.class);
-    private static final String PUBLIC_IP = "10.0.0.100";
-    private static final int SERVICE_PORT = 7777;
-    private static final String SERVER1_IP = "10.0.0.1";
-    private static final String SERVER2_IP = "10.0.0.2";
-    private static final byte[] SERVER1_MAC = {0,0,0,0,0,0x01};
-    private static final byte[] SERVER2_MAC = {0,0,0,0,0,0x02};
-    private static final byte[] SERVICE_MAC = {0,0,0,0,0,0x64};
-    private static final String SERVER1_CONNECTOR_NAME = "s1-eth1";
-    private static final String SERVER2_CONNECTOR_NAME = "s1-eth2";
-    
+	private static final Object SetNwTos = 3;
+    //private static final String PUBLIC_IP = "10.0.0.100";
+    //private static final int SERVICE_PORT = 7777;
+    //private static final String SERVER1_IP = "10.0.0.1";
+    //private static final String SERVER2_IP = "10.0.0.2";
+    //private static final byte[] SERVER1_MAC = {0,0,0,0,0,0x01};
+    //private static final byte[] SERVER2_MAC = {0,0,0,0,0,0x02};
+    //private static final byte[] SERVICE_MAC = {0,0,0,0,0,0x64};
+    //private static final String SERVER1_CONNECTOR_NAME = "s1-eth1";
+    //private static final String SERVER2_CONNECTOR_NAME = "s1-eth2";
     private IDataPacketService dataPacketService;
     private IFlowProgrammerService flowProgrammerService;
     private ISwitchManager switchManager;
-    private InetAddress publicInetAddress;
-    private InetAddress server1Address;
-    private InetAddress server2Address;
-    private int serverNumber = 0;
-    
+    //
+    private Map<Node, Map<Long, NodeConnector>> mac_to_port_per_switch = new HashMap<Node, Map<Long, NodeConnector>>();
+    //
+    //private InetAddress publicInetAddress;
+    //private InetAddress server1Address;
+    //private InetAddress server2Address;
+    //private int serverNumber = 0;
+    /*
     static private InetAddress intToInetAddress(int i) {
         byte b[] = new byte[] { (byte) ((i>>24)&0xff), (byte) ((i>>16)&0xff), (byte) ((i>>8)&0xff), (byte) (i&0xff) };
         InetAddress addr;
@@ -64,6 +108,7 @@ public class DissectorHandler implements IListenDataPacket {
 
         return addr;
     }
+    
 
     public DissectorHandler() {
         try {
@@ -84,6 +129,7 @@ public class DissectorHandler implements IListenDataPacket {
             log.error(e.getMessage());
         }
     }
+    */
     
     /**
      * Sets a reference to the requested DataPacketService
@@ -130,7 +176,6 @@ public class DissectorHandler implements IListenDataPacket {
      */
     void setSwitchManagerService(ISwitchManager s) {
         log.trace("Set SwitchManagerService.");
-
         switchManager = s;
     }
 
@@ -139,42 +184,200 @@ public class DissectorHandler implements IListenDataPacket {
      */
     void unsetSwitchManagerService(ISwitchManager s) {
         log.trace("Removed SwitchManagerService.");
-
         if (switchManager == s) {
             switchManager = null;
         }
     }
     
-    @Override
+    //////////////////////////////////
+    /**
+     * Function called by the dependency manager when all the required
+     * dependencies are satisfied
+     * Con esta función deshabilitamos el paquete simple-forwading.
+     */
+    void init() {
+        log.info("Initialized");
+        // Disabling the SimpleForwarding and ARPHandler bundle to not conflict with this one
+        BundleContext bundleContext = FrameworkUtil.getBundle(this.getClass()).getBundleContext();
+        for(Bundle bundle : bundleContext.getBundles()) {
+            if (bundle.getSymbolicName().contains("simpleforwarding")) {
+                try {
+                    bundle.uninstall();
+                } catch (BundleException e) {
+                    log.error("Exception in Bundle uninstall "+bundle.getSymbolicName(), e); 
+                }   
+            } 
+        }
+    }
+    
+    private void floodPacket(RawPacket inPkt) {
+        NodeConnector incoming_connector = inPkt.getIncomingNodeConnector();
+        Node incoming_node = incoming_connector.getNode();
+        Set<NodeConnector> nodeConnectors =
+                this.switchManager.getUpNodeConnectors(incoming_node);
+        for (NodeConnector p : nodeConnectors) {
+            if (!p.equals(incoming_connector)) {
+                try {
+                    RawPacket destPkt = new RawPacket(inPkt);
+                    destPkt.setOutgoingNodeConnector(p);
+                    this.dataPacketService.transmitDataPacket(destPkt);
+                    log.info("Datos de paquete transmitido dentro de floodpacket: "+this.dataPacketService.decodeDataPacket(destPkt).toString());
+                } catch (ConstructionException e2) {
+                    continue;
+                }
+            }
+        }
+    }
+    ///////////////////////////////////
+    
+    /**
+     * Con esta función tratamos el paquete recibido.
+     **/
     public PacketResult receiveDataPacket(RawPacket inPkt) {
-        // The connector, the packet came from ("port")
+    	if (inPkt == null) {
+            return PacketResult.IGNORED;
+        }
+    	// The connector, the packet came from ("port")
         NodeConnector ingressConnector = inPkt.getIncomingNodeConnector();
         // The node that received the packet ("switch")
         Node node = ingressConnector.getNode();
-        
         log.trace("Packet from " + node.getNodeIDString() + " " + ingressConnector.getNodeConnectorIDString());
+        /////////////////////////////////////////////////////////////
+        Packet formattedPak = this.dataPacketService.decodeDataPacket(inPkt);
+        NodeConnector incoming_connector = inPkt.getIncomingNodeConnector();
+        Node incoming_node = incoming_connector.getNode();
+        if(formattedPak instanceof Ethernet) {
+        	Ethernet ethFrame = (Ethernet) formattedPak;
+            Object l3Pkt = ethFrame.getPayload();
+        	byte[] srcMAC = ((Ethernet)formattedPak).getSourceMACAddress();
+            byte[] dstMAC = ((Ethernet)formattedPak).getDestinationMACAddress();
+            long srcMAC_val = BitBufferHelper.toNumber(srcMAC);
+            long dstMAC_val = BitBufferHelper.toNumber(dstMAC);
+            Match match = new Match();
+            match.setField( new MatchField(MatchType.IN_PORT, incoming_connector) );
+            match.setField( new MatchField(MatchType.DL_DST, dstMAC.clone()) );
+            
+            /////
+            if (l3Pkt instanceof IPv4) {
+                IPv4 ipv4Pkt = (IPv4) l3Pkt;
+                Object l4Datagram = ipv4Pkt.getPayload();
+                ipv4Pkt.getSourceAddress();               
+                if (l4Datagram instanceof TCP){
+                	TCP tcpDatagram = (TCP) l4Datagram;
+                	byte[] tcpRawPayload = tcpDatagram.getRawPayload();
+                	log.info("Payload del paquete UDP: "+Arrays.toString(tcpRawPayload));
+                	//String tcpRawPayData = new String(tcpRawPayload, UTF_8);
+                	//log.info("Payload de UDP en string: "+tcpRawPayData);
+                    byte[] arrayPacketData = inPkt.getPacketData();
+                    log.info("Datos del paquete arrayPacketData: "+Arrays.toString(arrayPacketData));
+                    String datosDNS = new String(arrayPacketData, UTF_8);
+                    //log.info("Los datos del paquete son en UTF-8: "+datosDNS);
+                    if(datosDNS.contains("googlevideo.com")){
+                    	log.info("Lo tenemos!!!");
+                    	byte diffServ = 2;
+                        ipv4Pkt.setDiffServ(diffServ);
+                        ipv4Pkt.setFlags(diffServ);
+                        log.info("Mostramos el paquete editado a ver: "+ipv4Pkt);
+                        Object prueba = ipv4Pkt;
+                        Ethernet prueba2 = (Ethernet) prueba;
+                        Packet prueba3 = prueba2;
+                        RawPacket transmiteaver = this.dataPacketService.encodeDataPacket(prueba3);
+                        this.dataPacketService.transmitDataPacket(transmiteaver);
+                    }
+                }
+                /*if (l4Datagram instanceof TCP) {
+                    TCP tcpDatagram = (TCP) l4Datagram;
+                    int dstPort = tcpDatagram.getDestinationPort();
+                    this.dataPacketService.decodeDataPacket(inPkt);
+                    byte[] arrayRawPacket = inPkt.getPacketData();
+                    String comprobacion = new String(arrayRawPacket, 0);
+                    if(comprobacion.contains("Hola")){
+                    	log.info("Esto va fino filipino");
+                    }
+                	log.info("Datos del paquete arrayRawPacket: "+Arrays.toString(arrayRawPacket));
+                	try {
+						log.info("Datos 2 del paquete: "+new String(arrayRawPacket, "UTF-8"));
+					} catch (UnsupportedEncodingException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+                	log.info("Payload del paquete formattedPak: "+formattedPak.getPayload());
+                	log.info("Payload del paquete formattedPak toString: "+formattedPak.getPayload().toString());
+                    //log.info("¿Algo sobre TCP? "+tcpDatagram.getPayload()+""+tcpDatagram.DATAOFFSET);
+                }*/
+                /*if(l4Datagram instanceof UDP){
+                	UDP udpDatagram = (UDP) l4Datagram;
+                	log.info("Paquete UDP a incluir en flow: "+udpDatagram.getPayload()+"\nUDP to string: \n"+udpDatagram.toString()+
+                			"UDP Checksum"+udpDatagram.getChecksum()+"\nRawPayload de UDP"+udpDatagram.getRawPayload());
+                }*/
+            }
+            /////
+         // Set up the mapping: switch -> src MAC address -> incoming port
+            if (this.mac_to_port_per_switch.get(incoming_node) == null) {
+                this.mac_to_port_per_switch.put(incoming_node, new HashMap<Long, NodeConnector>());
+            }            
+            this.mac_to_port_per_switch.get(incoming_node).put(srcMAC_val, incoming_connector);
+
+            NodeConnector dst_connector = this.mac_to_port_per_switch.get(incoming_node).get(dstMAC_val);
+            
+            
+         // Do I know the destination MAC?
+            if (dst_connector != null) {
+            	/////////////////////////
+                RawPacket destPkt = inPkt;
+                
+                destPkt.setOutgoingNodeConnector(dst_connector);
+                destPkt.setProps(SetNwTos,555);
+                log.info("Cambio de ToS: "+SetNwTos);
+                this.dataPacketService.transmitDataPacket(destPkt);
+                //log.info("Datos de paquete transmitido: "+destPkt.getPacketData().toString()+" payloadddddddddddddddddddddddddddddddddddddddd"+this.dataPacketService.decodeDataPacket(destPkt).getPayload().toString());
+                /////////////////////////
+                List<Action> actions = new ArrayList<Action>();
+                actions.add(new Output(dst_connector));
+                //log.info("Añadiendo flujo: "+match.getMatches()+"\nAcciones a realizar"+actions.toString());
+                Flow f = new Flow(match, actions);
+                
+                // Modify the flow on the network node
+                Status status = flowProgrammerService.addFlow(incoming_node, f);
+                if (!status.isSuccess()) {
+                    log.warn(
+                            "SDN Plugin failed to program the flow: {}. The failure is: {}",
+                            f, status.getDescription());
+                    return PacketResult.IGNORED;
+                }
+                log.info("Installed flow {} in node {}",
+                        f, incoming_node);
+            }
+            /*else 
+                floodPacket(inPkt);*/
+        }
+        /////////////////////////////////////////////////////////////
         
+        /*
         // Use DataPacketService to decode the packet.
-        Packet pkt = dataPacketService.decodeDataPacket(inPkt);
+        Packet pkt = this.dataPacketService.decodeDataPacket(inPkt);
         
         if (pkt instanceof Ethernet) {
             Ethernet ethFrame = (Ethernet) pkt;
             Object l3Pkt = ethFrame.getPayload();
-	    log.info("Payload de ethernet "+l3Pkt);
+	        //
+            byte[] srcMAC = ((Ethernet)pkt).getSourceMACAddress();
+            byte[] dstMAC = ((Ethernet)pkt).getDestinationMACAddress();
+            long srcMAC_val = BitBufferHelper.toNumber(srcMAC);
+            long dstMAC_val = BitBufferHelper.toNumber(dstMAC);
+            //
          
             if (l3Pkt instanceof IPv4) {
                 IPv4 ipv4Pkt = (IPv4) l3Pkt;
                 InetAddress clientAddr = intToInetAddress(ipv4Pkt.getSourceAddress());
                 InetAddress dstAddr = intToInetAddress(ipv4Pkt.getDestinationAddress());
                 Object l4Datagram = ipv4Pkt.getPayload();
-                
                 if (l4Datagram instanceof TCP) {
                     TCP tcpDatagram = (TCP) l4Datagram;
                     int clientPort = tcpDatagram.getSourcePort();
                     int dstPort = tcpDatagram.getDestinationPort();
-                    Object tcpPkt = tcpDatagram.getPayload();
 
-                    if (publicInetAddress.equals(dstAddr) /*&& dstPort == SERVICE_PORT*/) { // para detectar el string de TCP no necesitamos que vaya al puerto 7777
+                    if (publicInetAddress.equals(dstAddr) && dstPort == SERVICE_PORT) { 
                         log.info("Received packet for load balanced service");
                         
                         // Select one of the two servers round robin.
@@ -211,7 +414,7 @@ public class DissectorHandler implements IListenDataPacket {
                         match.setField(MatchType.NW_DST, dstAddr);
                         match.setField(MatchType.TP_SRC, (short) clientPort);
                         match.setField(MatchType.TP_DST, (short) dstPort);
-                        
+
                         // List of actions applied to the packet
                         List<Action> actions = new LinkedList<Action>();
                         
@@ -245,6 +448,7 @@ public class DissectorHandler implements IListenDataPacket {
                         match.setField(MatchType.TP_SRC, (short) dstPort);
                         match.setField(MatchType.TP_DST, (short) clientPort);
                         
+                        
                         // Re-write the server instance IP address to the public IP address
                         actions = new LinkedList<Action>();
                         actions.add(new SetNwSrc(publicInetAddress));
@@ -262,20 +466,25 @@ public class DissectorHandler implements IListenDataPacket {
                         
                         // Forward initial packet to selected server
                       
-                        log.trace("Forwarding packet to " + serverInstanceAddr.toString() + " through port " + egressConnector.getNodeConnectorIDString());
+                        log.trace("Reenviando paquete a " + serverInstanceAddr.toString() + " por el puerto " + egressConnector.getNodeConnectorIDString());
                         ethFrame.setDestinationMACAddress(serverInstanceMAC);
                         ipv4Pkt.setDestinationAddress(serverInstanceAddr);
                         inPkt.setOutgoingNodeConnector(egressConnector);                       
                         dataPacketService.transmitDataPacket(inPkt);
-                        
                         return PacketResult.CONSUME;
                     }
+                    else 
+                        floodPacket(inPkt);
+                    	
                 }
             }
-        }
+        	floodPacket(inPkt);
+        	
+        }*/
         
         // We did not process the packet -> let someone else do the job.
         return PacketResult.IGNORED;
     }
+
 
 }
