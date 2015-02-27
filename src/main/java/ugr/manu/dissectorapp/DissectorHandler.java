@@ -1,3 +1,17 @@
+/********************************************************************************************************
+ * 																										*
+ * Project Name: dissectorapp															                *
+ * Author: Manuel Sánchez López (@M4nu_sl)															    *
+ * github: pahharo															                            *
+ * Description: This project concerns the creation of a deep packet inspector that is going to detect   *
+ * the youtube traffic and it must be marked to offer quality of service in the network. It is based on *
+ * the OpenDaylight controller and the communication is over OpenFlow protocol.                         *
+ * 															                                            *
+ * *****************************************************************************************************/
+
+
+
+
 package ugr.manu.dissectorapp;
 
 import java.net.InetAddress;
@@ -5,7 +19,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-//import java.util.LinkedList;
+//import readmejava.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,13 +65,7 @@ import org.slf4j.LoggerFactory;
 //import org.opendaylight.controller.protocol_plugin.openflow.IDataPacketListen;
 //import org.opendaylight.controller.protocol_plugin.openflow.core.IMessageListener;
 
-import org.opendaylight.controller.sal.packet.UDP;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.address.address.Ipv4;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.openflow.oxm.rev130731.Ipv4Dst;
-
-import aQute.bnd.service.diff.Tree.Data;
-
+//import org.opendaylight.controller.sal.packet.UDP;
 //import org.opendaylight.controller.
 import static java.nio.charset.StandardCharsets.*;
 /*
@@ -285,31 +293,6 @@ public class DissectorHandler implements IListenDataPacket {
                         this.dataPacketService.transmitDataPacket(transmiteaver);
                     }
                 }
-                /*if (l4Datagram instanceof TCP) {
-                    TCP tcpDatagram = (TCP) l4Datagram;
-                    int dstPort = tcpDatagram.getDestinationPort();
-                    this.dataPacketService.decodeDataPacket(inPkt);
-                    byte[] arrayRawPacket = inPkt.getPacketData();
-                    String comprobacion = new String(arrayRawPacket, 0);
-                    if(comprobacion.contains("Hola")){
-                    	log.info("Esto va fino filipino");
-                    }
-                	log.info("Datos del paquete arrayRawPacket: "+Arrays.toString(arrayRawPacket));
-                	try {
-						log.info("Datos 2 del paquete: "+new String(arrayRawPacket, "UTF-8"));
-					} catch (UnsupportedEncodingException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-                	log.info("Payload del paquete formattedPak: "+formattedPak.getPayload());
-                	log.info("Payload del paquete formattedPak toString: "+formattedPak.getPayload().toString());
-                    //log.info("¿Algo sobre TCP? "+tcpDatagram.getPayload()+""+tcpDatagram.DATAOFFSET);
-                }*/
-                /*if(l4Datagram instanceof UDP){
-                	UDP udpDatagram = (UDP) l4Datagram;
-                	log.info("Paquete UDP a incluir en flow: "+udpDatagram.getPayload()+"\nUDP to string: \n"+udpDatagram.toString()+
-                			"UDP Checksum"+udpDatagram.getChecksum()+"\nRawPayload de UDP"+udpDatagram.getRawPayload());
-                }*/
             }
             /////
          // Set up the mapping: switch -> src MAC address -> incoming port
