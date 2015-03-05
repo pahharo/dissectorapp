@@ -1,5 +1,5 @@
 Manifest-Version: 1.0
-Bnd-LastModified: 1425554027327
+Bnd-LastModified: 1425554939544
 Build-Jdk: 1.7.0_76
 Built-By: root
 Bundle-Activator: ugr.manu.dissectorapp.Activator
@@ -11,9 +11,9 @@ Created-By: Apache Maven Bundle Plugin
 Export-Package: ugr.manu.dissectorapp;uses:="org.opendaylight.controller
  .sal.flowprogrammer,org.opendaylight.controller.sal.core,org.apache.fel
  ix.dm,org.opendaylight.controller.switchmanager,org.opendaylight.contro
- ller.sal.packet,org.slf4j,org.opendaylight.controller.sal.action,org.os
- gi.framework,org.opendaylight.controller.sal.match,org.opendaylight.con
- troller.sal.utils";version="0.1.0"
+ ller.sal.packet,org.slf4j,org.opendaylight.controller.sal.utils,org.ope
+ ndaylight.controller.sal.action,org.osgi.framework,org.opendaylight.con
+ troller.sal.match";version="0.1.0"
 Import-Package: org.apache.felix.dm;version="[3.0,4)",org.opendaylight.c
  ontroller.sal.action;version="[0.7,1)",org.opendaylight.controller.sal.
  core;version="[0.7,1)",org.opendaylight.controller.sal.flowprogrammer;v

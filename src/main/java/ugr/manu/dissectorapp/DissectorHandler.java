@@ -281,7 +281,7 @@ public class DissectorHandler implements IListenDataPacket {
                 ipv4Pkt.getSourceAddress();
                 // Esta es la clave para que añada el flujo!!!!!!!! no borrarrrrr
                 match.setField(MatchType.DL_TYPE, (short) 0x0800);  // IPv4 ethertype
-                match.setField(MatchType.NW_PROTO, (byte) 6);       // TCP protocol id
+                //match.setField(MatchType.NW_PROTO, (byte) 6);       // TCP protocol id
                 //byte tos = 1;            	
                 if (l4Datagram instanceof TCP){
                 	TCP tcpDatagram = (TCP) l4Datagram;
