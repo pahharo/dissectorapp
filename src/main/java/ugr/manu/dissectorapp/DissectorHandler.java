@@ -54,6 +54,9 @@ import org.opendaylight.controller.sal.packet.TCP;
 import org.opendaylight.controller.sal.utils.EtherTypes;
 import org.opendaylight.controller.sal.utils.Status;
 import org.opendaylight.controller.switchmanager.ISwitchManager;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflow.augments.rev131002.NwTosAction;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflow.augments.rev131002.NwTosActionBuilder;
+import org.opendaylight.yangtools.yang.binding.DataContainer;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
@@ -64,6 +67,10 @@ import org.slf4j.LoggerFactory;
 //////
 //import org.opendaylight.controller.protocol_plugin.openflow.IDataPacketListen;
 //import org.opendaylight.controller.protocol_plugin.openflow.core.IMessageListener;
+
+
+
+
 
 //import org.opendaylight.controller.sal.packet.UDP;
 //import org.opendaylight.controller.
@@ -221,15 +228,14 @@ public class DissectorHandler implements IListenDataPacket {
     private void floodPacket(RawPacket inPkt) {
         NodeConnector incoming_connector = inPkt.getIncomingNodeConnector();
         Node incoming_node = incoming_connector.getNode();
-        Set<NodeConnector> nodeConnectors =
-                this.switchManager.getUpNodeConnectors(incoming_node);
+        Set<NodeConnector> nodeConnectors = this.switchManager.getUpNodeConnectors(incoming_node);
         for (NodeConnector p : nodeConnectors) {
             if (!p.equals(incoming_connector)) {
                 try {
                     RawPacket destPkt = new RawPacket(inPkt);
                     destPkt.setOutgoingNodeConnector(p);
                     this.dataPacketService.transmitDataPacket(destPkt);
-                    log.info("Datos de paquete transmitido dentro de floodpacket: "+this.dataPacketService.decodeDataPacket(destPkt).toString());
+                    //log.info("Datos de paquete transmitido dentro de floodpacket: "+this.dataPacketService.decodeDataPacket(destPkt).toString());
                 } catch (ConstructionException e2) {
                     continue;
                 }
@@ -264,33 +270,32 @@ public class DissectorHandler implements IListenDataPacket {
             Match match = new Match();
             match.setField( new MatchField(MatchType.IN_PORT, incoming_connector) );
             match.setField( new MatchField(MatchType.DL_DST, dstMAC.clone()) );
-            
+            //match.setField(MatchType.NW_TOS, (byte) 1);
+            //log.info("antes");
+            //match.setField(MatchType.NW_TOS, (byte) 0);
+            //log.info("despues");
             /////
             if (l3Pkt instanceof IPv4) {
                 IPv4 ipv4Pkt = (IPv4) l3Pkt;
                 Object l4Datagram = ipv4Pkt.getPayload();
-                ipv4Pkt.getSourceAddress();               
+                ipv4Pkt.getSourceAddress();
+                // Esta es la clave para que añada el flujo!!!!!!!! no borrarrrrr
+                match.setField(MatchType.DL_TYPE, (short) 0x0800);  // IPv4 ethertype
+                match.setField(MatchType.NW_PROTO, (byte) 6);       // TCP protocol id
+                //byte tos = 1;            	
                 if (l4Datagram instanceof TCP){
                 	TCP tcpDatagram = (TCP) l4Datagram;
                 	byte[] tcpRawPayload = tcpDatagram.getRawPayload();
-                	log.info("Payload del paquete UDP: "+Arrays.toString(tcpRawPayload));
+                	log.info("Payload del paquete TCP: "+Arrays.toString(tcpRawPayload));
                 	//String tcpRawPayData = new String(tcpRawPayload, UTF_8);
                 	//log.info("Payload de UDP en string: "+tcpRawPayData);
                     byte[] arrayPacketData = inPkt.getPacketData();
                     log.info("Datos del paquete arrayPacketData: "+Arrays.toString(arrayPacketData));
                     String datosDNS = new String(arrayPacketData, UTF_8);
                     //log.info("Los datos del paquete son en UTF-8: "+datosDNS);
-                    if(datosDNS.contains("googlevideo.com")){
+                    if(datosDNS.contains("googlevideo")){
                     	log.info("Lo tenemos!!!");
-                    	byte diffServ = 2;
-                        ipv4Pkt.setDiffServ(diffServ);
-                        ipv4Pkt.setFlags(diffServ);
-                        log.info("Mostramos el paquete editado a ver: "+ipv4Pkt);
-                        Object prueba = ipv4Pkt;
-                        Ethernet prueba2 = (Ethernet) prueba;
-                        Packet prueba3 = prueba2;
-                        RawPacket transmiteaver = this.dataPacketService.encodeDataPacket(prueba3);
-                        this.dataPacketService.transmitDataPacket(transmiteaver);
+                    	//match.setField(MatchType.NW_TOS, (byte) 0x01);                    	
                     }
                 }
             }
@@ -306,17 +311,12 @@ public class DissectorHandler implements IListenDataPacket {
             
          // Do I know the destination MAC?
             if (dst_connector != null) {
-            	/////////////////////////
-                RawPacket destPkt = inPkt;
-                
-                destPkt.setOutgoingNodeConnector(dst_connector);
-                destPkt.setProps(SetNwTos,555);
-                log.info("Cambio de ToS: "+SetNwTos);
-                this.dataPacketService.transmitDataPacket(destPkt);
-                //log.info("Datos de paquete transmitido: "+destPkt.getPacketData().toString()+" payloadddddddddddddddddddddddddddddddddddddddd"+this.dataPacketService.decodeDataPacket(destPkt).getPayload().toString());
-                /////////////////////////
                 List<Action> actions = new ArrayList<Action>();
                 actions.add(new Output(dst_connector));
+                actions.add(new SetNwTos(1));
+                //int tos = 1;
+                //actions.add(new SetNwTos(tos));
+                log.info("Prueba diquiticien");
                 //log.info("Añadiendo flujo: "+match.getMatches()+"\nAcciones a realizar"+actions.toString());
                 Flow f = new Flow(match, actions);
                 
