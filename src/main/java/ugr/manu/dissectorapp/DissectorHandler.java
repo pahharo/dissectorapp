@@ -91,26 +91,9 @@ import aQute.bnd.service.diff.Tree.Data;
 //import org.opendaylight.controller.
 import static java.nio.charset.StandardCharsets.*;
 
-/*
-import org.openflow.protocol.OFFlowMod;
-import org.openflow.protocol.OFMatch;
-import org.openflow.protocol.OFMessage;
-import org.openflow.protocol.OFPacketIn;
-import org.openflow.protocol.OFPacketOut;
-import org.openflow.protocol.OFPort;
-import org.openflow.protocol.OFType;
-import org.openflow.protocol.action.OFAction;
-import org.openflow.protocol.action.OFActionOutput;
-import org.openflow.util.U16;
-*/
-
 public class DissectorHandler implements IListenDataPacket {
     
     private static final Logger log = LoggerFactory.getLogger(DissectorHandler.class);
-
-    /* private int contadorPaquetesYoutube = 0;      No añadimos ningun flujo de tipo IP hasta que este contador pase de 5 paquetes 
-      												 porque el paquete que lleva el string "googlevideo" se envía en quinto lugar
-     											  */
     private boolean youtubeTraffic=false;
     private boolean webTraffic=false;
     private boolean VoIPTraffic=false;
@@ -268,9 +251,9 @@ public class DissectorHandler implements IListenDataPacket {
             match.setField( new MatchField(MatchType.IN_PORT, incoming_connector) );
             match.setField( new MatchField(MatchType.DL_DST, dstMAC) );
             match.setField( new MatchField(MatchType.DL_SRC, srcMAC) );
-            if(l3Pkt instanceof ARP){
+            /*if(l3Pkt instanceof ARP){
                 match.setField(MatchType.DL_TYPE, (short) 0x0806);       // ARP protocol id
-            }
+            }*/
             
             
             if (l3Pkt instanceof IPv4) {
@@ -290,12 +273,8 @@ public class DissectorHandler implements IListenDataPacket {
                 	TCP tcpDatagram = (TCP) l4Datagram;
                     int dstPort = tcpDatagram.getDestinationPort();
                     int srcPort = tcpDatagram.getSourcePort();
-                    //int srcPort = tcpDatagram.getDestinationPort();
                     match.setField(MatchType.NW_PROTO, (byte) 6);       // TCP protocol id
-                    //match.setField(MatchType.TP_SRC, (short) srcPort);
-                    match.setField(MatchType.TP_DST, (short) dstPort);
-                	//byte[] tcpRawPayload = tcpDatagram.getRawPayload();
-                             	
+                    match.setField(MatchType.TP_DST, (short) dstPort);                             	
                 	webTraffic = isWebTraffic(tcpDatagram);
                 	if(isWebTraffic(tcpDatagram)){
 	                    if(dstPort==443 || srcPort==443 || dstPort==80 || srcPort==80){
@@ -321,8 +300,8 @@ public class DissectorHandler implements IListenDataPacket {
                 	//String tcpRawPayData = new String(tcpRawPayload, UTF_8);
                 	//log.info("Payload de UDP en string: "+tcpRawPayData);
                     byte[] arrayPacketData = inPkt.getPacketData();
-                	String datosTCP = new String(arrayPacketData, UTF_8);
-                	log.info("A ver que se muestra: "+datosTCP);
+                	//String datosTCP = new String(arrayPacketData, UTF_8);
+                	//log.info("A ver que se muestra: "+datosTCP);
                     youtubeTraffic = isYoutubeTraffic(arrayPacketData);
                     /*if(l4Datagram instanceof TlsDetector){
                         match.setField(MatchType.DL_TYPE, (short) 0x38);  // TLS ethertype
@@ -348,7 +327,7 @@ public class DissectorHandler implements IListenDataPacket {
             
          // Do I know the destination MAC?
             if (dst_connector != null) {
-                List<Action> actions = new ArrayList<Action>();
+				List<Action> actions = new ArrayList<Action>();
                 actions.add(new Output(dst_connector));
                 if(webTraffic){
                 	webTraffic = false;
@@ -385,24 +364,11 @@ public class DissectorHandler implements IListenDataPacket {
                 	actions.add(new SetNwTos(3));    
                 } else {
                 	añadeFlujo = true;
-                }
-                /*if(youtubeTraffic){
-                	youtubeTraffic = false;
-                	log.info("Nuevo ToS para tráfico Youtube");
-                    actions.add(new SetNwTos(1)); // Se añade un nuevo ToS al paquete una vez recibido para dar QoS en la red
-                    
-                
-                 * Esta sección de código nos permitiría detectar tráfico web. La desactivamos porque sino no añade el flujo de
-                 * tráfico Youtube.
-                } else if (webTraffic){
-                	webTraffic = false;
-                	actions.add(new SetNwTos(2));
-                */
-                
+                }                
                 
                 if(añadeFlujo){
 	                Flow f = new Flow(match, actions);
-	                
+	                añadeFlujo = false;
 	                // Modify the flow on the network node
 	                Status status = flowProgrammerService.addFlow(incoming_node, f);
 	                if (!status.isSuccess()) {
