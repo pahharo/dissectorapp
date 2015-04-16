@@ -1,3 +1,20 @@
+/**
+Copyright (C) 2015 Manuel Sánchez López
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have getTransmitErrorCountd a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 /********************************************************************************************************
  * 																										*
  * Project Name: dissectorapp															                *
@@ -192,6 +209,10 @@ public class DissectorHandler implements IListenDataPacket {
     
     
     /**
+     *The function is a modification of an another function. The original
+     *is property of SDNHUB.org and it's used under a GPLv3 License. All the credits for SDNHUB.org
+     *The original code can be find in
+     *https://github.com/sdnhub/SDNHub_Opendaylight_Tutorial/blob/master/adsal_L2_forwarding/src/main/java/org/opendaylight/tutorial/tutorial_L2_forwarding/internal/TutorialL2Forwarding.java
      * Función utilizada para inundar en caso de no tener la dirección destino
      * @param inPkt: paquete entrante al nodo
      */
@@ -227,7 +248,10 @@ public class DissectorHandler implements IListenDataPacket {
     }
     
     /**
-     * Con esta función tratamos el paquete recibido.
+     *The function is a modification of an another function. The original
+     *is property of SDNHUB.org and it's used under a GPLv3 License. All the credits for SDNHUB.org
+     *The original code can be find in
+     *https://github.com/sdnhub/SDNHub_Opendaylight_Tutorial/blob/master/adsal_L2_forwarding/src/main/java/org/opendaylight/tutorial/tutorial_L2_forwarding/internal/TutorialL2Forwarding.java
      **/
     public PacketResult receiveDataPacket(RawPacket inPkt) {
     	if (inPkt == null) {

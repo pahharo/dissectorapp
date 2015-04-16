@@ -43,23 +43,24 @@ def myNetwork():
 
     info( '*** Add switches\n')
     #s1 = net.addSwitch('s1', cls=OVSSwitch, mac='00:00:00:00:00:04', protocols='OpenFlow13')
-    s1 = net.addSwitch('s1')
+    s1 = net.addSwitch('s1', ip='10.0.0.10')
+
+    info( '*** Add bridge\n')
     Intf('wlan0',node=s1)
 
     info( '*** Add hosts\n')
     h1 = net.addHost('h1', cls=Host, ip='10.0.0.1', mac='00:00:00:00:00:01')
 
-
+    info( '*** Add links\n') 
     net.addLink(s1, h1, bw=10, delay='0.2ms')
-
 
     info( '*** Starting network\n')
     net.build()
     net.start()
+
     info( '*** Starting controllers\n')
     for controller in net.controllers:
         controller.start()
-
 
     info( '*** Starting switches\n')
     net.get('s1').start([c0])

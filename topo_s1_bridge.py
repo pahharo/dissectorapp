@@ -43,10 +43,10 @@ def myNetwork():
 
     info( '*** Add switches\n')
     #s1 = net.addSwitch('s1', cls=OVSSwitch, mac='00:00:00:00:00:04', protocols='OpenFlow13')
-    s1 = net.addSwitch('s1')
+    s1 = net.addSwitch('s1', ip='10.0.0.10')
 
     info( '*** Add bridge\n')
-    Intf('wlan0',node=s1)
+    Intf('eth0',node=s1)
 
     info( '*** Add hosts\n')
     h1 = net.addHost('h1', cls=Host, ip='10.0.0.1', mac='00:00:00:00:00:01')
