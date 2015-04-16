@@ -37,7 +37,7 @@ def myNetwork():
 		      ip='127.0.0.1'
                      )
     info( '*** Add switches\n')
-    s1 = net.addSwitch('s1', cls=OVSSwitch, mac='00:00:00:00:00:01', protocols='OpenFlow13')
+    s1 = net.addSwitch('s1', cls=OVSSwitch, mac='00:00:00:00:00:10', protocols='OpenFlow13')
 
     info( '*** Add hosts\n')
     h1 = net.addHost('h1', cls=Host, ip='10.0.0.1', mac='00:00:00:00:00:01', defaultRoute='via 10.0.0.2') # defaultRoute es la ip del nat
