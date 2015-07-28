@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 """
-Copyright (C) 2015 Manuel Sánchez López
+Copyright (C) 2015 Manuel Sanchez Lopez
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -62,14 +62,7 @@ def myNetwork():
     info('*** Add NAT\n')
     net.addNAT().configDefault()
 
-
     net.addLink(s1, h1, bw=10, delay='0.2ms')
-    #net.addLink(s1, nat1)
-    #net.addLink(s3, nat1)
-    #net.addLink(s3, nat2)  
-    #net.addLink(s2, nat2)  
-    #net.staticArp()
-
 
     info( '*** Starting network\n')
     net.build()

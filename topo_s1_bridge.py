@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 """
-Copyright (C) 2015 Manuel Sánchez López
+Copyright (C) 2015 Manuel Sanchez Lopez
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -30,16 +30,12 @@ from subprocess import call
 from mininet.nodelib import NAT
 from mininet.topolib import TreeNet
 """
-           h3
-           |
-           s3
-     ______|_______
-    |              |
-   nat1           nat2
-    |              |
-   s1              s2
-    |              |
-   h1              h2
+		bridge	
+	 _________________
+      --|---s1 ----wlan0--|---INTERNET
+      | |_________________|
+      |
+      h1
 """
 
 def myNetwork():
@@ -59,17 +55,21 @@ def myNetwork():
                      )
 
     info( '*** Add switches\n')
-    #s1 = net.addSwitch('s1', cls=OVSSwitch, mac='00:00:00:00:00:04', protocols='OpenFlow13')
-    s1 = net.addSwitch('s1', ip='10.0.0.10')
+    s1 = net.addSwitch('s1', cls=OVSSwitch, mac='00:00:00:00:00:04', protocols='OpenFlow13')
+    #s1 = net.addSwitch('s1', ip='10.0.0.10')
 
-    info( '*** Add bridge\n')
-    Intf('eth0',node=s1)
+
 
     info( '*** Add hosts\n')
     h1 = net.addHost('h1', cls=Host, ip='10.0.0.1', mac='00:00:00:00:00:01')
+    h2 = net.addHost('h2', cls=Host, ip='10.0.0.2', mac='00:00:00:00:00:02')
 
     info( '*** Add links\n') 
     net.addLink(s1, h1, bw=10, delay='0.2ms')
+    net.addLink(s1, h2, bw=10, delay='0.2ms')
+
+    info( '*** Add bridge\n')
+    Intf('eth1',node=s1)
 
     info( '*** Starting network\n')
     net.build()

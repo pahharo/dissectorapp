@@ -41,8 +41,9 @@ import java.io.UnsupportedEncodingException;
 import java.lang.Object;
 import java.lang.Enum;
 
+import org.opendaylight.controller.sal.action.Controller;
 import org.apache.log4j.pattern.SequenceNumberPatternConverter;
-import org.opendaylight.controller.protocol_plugin.openflow.core.internal.Controller;
+//import org.opendaylight.controller.protocol_plugin.openflow.core.internal.Controller;
 import org.opendaylight.controller.sal.action.Action;
 import org.opendaylight.controller.sal.action.Flood;
 import org.opendaylight.controller.sal.action.Loopback;
@@ -63,6 +64,7 @@ import org.opendaylight.controller.sal.match.MatchType;
 import org.opendaylight.controller.sal.packet.ARP;
 import org.opendaylight.controller.sal.packet.BitBufferHelper;
 import org.opendaylight.controller.sal.packet.Ethernet;
+import org.opendaylight.controller.sal.packet.ICMP;
 import org.opendaylight.controller.sal.packet.IDataPacketService;
 import org.opendaylight.controller.sal.packet.IListenDataPacket;
 import org.opendaylight.controller.sal.packet.IPv4;
@@ -75,9 +77,11 @@ import org.opendaylight.controller.sal.utils.EtherTypes;
 import org.opendaylight.controller.sal.utils.Status;
 import org.opendaylight.controller.switchmanager.ISwitchManager;
 import org.opendaylight.openflowjava.protocol.impl.core.TlsDetector;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.DomainName;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.flow.node.supported.match.types.MatchTypeBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.openflow.augments.rev131002.NwTosAction;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.openflow.augments.rev131002.NwTosActionBuilder;
+//import org.opendaylight.yang.gen.v1.urn.opendaylight.openflow.augments.rev131002.NwTosAction;
+//import org.opendaylight.yang.gen.v1.urn.opendaylight.openflow.augments.rev131002.NwTosActionBuilder;
 import org.opendaylight.yangtools.yang.binding.DataContainer;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -86,26 +90,10 @@ import org.osgi.framework.FrameworkUtil;
 import org.projectfloodlight.openflow.protocol.match.MatchFields;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-//////
-//import org.opendaylight.controller.protocol_plugin.openflow.IDataPacketListen;
-//import org.opendaylight.controller.protocol_plugin.openflow.core.IMessageListener;
 
-
-
-
-
-
-
-
-
-
-
-
-
+import com.google.common.net.InetAddresses;
 
 import aQute.bnd.service.diff.Tree.Data;
-//import org.opendaylight.controller.sal.packet.UDP;
-//import org.opendaylight.controller.
 import static java.nio.charset.StandardCharsets.*;
 
 public class DissectorHandler implements IListenDataPacket {
@@ -114,11 +102,24 @@ public class DissectorHandler implements IListenDataPacket {
     private boolean youtubeTraffic=false;
     private boolean webTraffic=false;
     private boolean VoIPTraffic=false;
+    private boolean icmpTraffic=false;
     private int contadorTraficoWeb = 0;
     private boolean añadeFlujo = false;
     private int actualDstAddr;
     private int actualSrcAddr;
     private boolean primeravez = true;
+    private boolean servidorVideoYoutube = false;
+    byte[] dirIP=new byte[4];
+	InetAddress srcIPservidorVideoYoutube=null;
+	List<InetAddress> srcIPservidorVideoYoutubeList = new ArrayList<InetAddress>();
+	InetAddress addressDeURLaIP=null;
+
+	String ipDNS=null;
+	String urlVideoYoutube=null;
+	InetAddress srcIPaddr=null;
+	InetAddress dstIPaddr=null;
+	List<InetAddress> direccionesServidoresDNSYoutube= new ArrayList<InetAddress>();
+
 
     
 	private IDataPacketService dataPacketService;
@@ -278,67 +279,69 @@ public class DissectorHandler implements IListenDataPacket {
             /*if(l3Pkt instanceof ARP){
                 match.setField(MatchType.DL_TYPE, (short) 0x0806);       // ARP protocol id
             }*/
-            
-            
             if (l3Pkt instanceof IPv4) {
                 IPv4 ipv4Pkt = (IPv4) l3Pkt;
                 Object l4Datagram = ipv4Pkt.getPayload();
-                InetAddress srcIPaddr = intToInetAddress(ipv4Pkt.getSourceAddress());
-                InetAddress dstIPaddr = intToInetAddress(ipv4Pkt.getDestinationAddress());
+                srcIPaddr = intToInetAddress(ipv4Pkt.getSourceAddress());
+                dstIPaddr = intToInetAddress(ipv4Pkt.getDestinationAddress());
+                ///
+                if(srcIPservidorVideoYoutubeList.contains(srcIPaddr) && srcIPaddr!=null){
+                	servidorVideoYoutube=true;
+                	log.info("Lista de direcciones de video Youtube: "+srcIPservidorVideoYoutubeList);
+                } else{
+                	log.info("srcIP: "+srcIPaddr+" ipDNS: "+srcIPservidorVideoYoutube);
+                }
                 
-                int src = ipv4Pkt.getSourceAddress();
-                int dst = ipv4Pkt.getDestinationAddress();
                 
                 // Esta es la clave para que añada el flujo!!!!!!!! no borrarrrrr
                 match.setField(MatchType.DL_TYPE, (short) 0x0800);  // IPv4 ethertype
                 match.setField(new MatchField(MatchType.NW_SRC, srcIPaddr));
                 match.setField(new MatchField(MatchType.NW_DST, dstIPaddr));
+                ////////////
+               
+                ////
                 if (l4Datagram instanceof TCP){
                 	TCP tcpDatagram = (TCP) l4Datagram;
                     int dstPort = tcpDatagram.getDestinationPort();
-                    int srcPort = tcpDatagram.getSourcePort();
                     match.setField(MatchType.NW_PROTO, (byte) 6);       // TCP protocol id
-                    match.setField(MatchType.TP_DST, (short) dstPort);                             	
+                    //match.setField(MatchType.TP_DST, (short) dstPort);                             	
                 	webTraffic = isWebTraffic(tcpDatagram);
-                	if(isWebTraffic(tcpDatagram)){
-	                    if(dstPort==443 || srcPort==443 || dstPort==80 || srcPort==80){
-	                        if(primeravez){
-	                        	actualDstAddr = dst;
-	                        	actualSrcAddr = src;
-	                        	primeravez = false;
-	                        	log.info("entra primera vez");
-	                        }
-		                    if(dst == actualDstAddr && src == actualSrcAddr) {
-		                    	contadorTraficoWeb++;
-		                    } else if(dst == actualSrcAddr && src == actualDstAddr){
-		                    	contadorTraficoWeb++;
-		                    } else {                 	
-		                    	actualDstAddr = dst;
-		                    	actualSrcAddr = src;
-		                    	contadorTraficoWeb=1;
-		                    }
-	                    }
-                	}
-                	
-                	//log.info("Payload del paquete TCP: "+Arrays.toString(tcpRawPayload));
-                	//String tcpRawPayData = new String(tcpRawPayload, UTF_8);
-                	//log.info("Payload de UDP en string: "+tcpRawPayData);
-                    byte[] arrayPacketData = inPkt.getPacketData();
-                	//String datosTCP = new String(arrayPacketData, UTF_8);
-                	//log.info("A ver que se muestra: "+datosTCP);
-                    youtubeTraffic = isYoutubeTraffic(arrayPacketData);
+
                     /*if(l4Datagram instanceof TlsDetector){
                         match.setField(MatchType.DL_TYPE, (short) 0x38);  // TLS ethertype
                     }*/
                 }
                 if (l4Datagram instanceof UDP){
                 	UDP udpDatagram = (UDP) l4Datagram;
-                    match.setField(MatchType.NW_PROTO, (byte) 17);       // UDP protocol id
-                	//byte[] udpRawPayload = udpDatagram.getRawPayload();
-                	//log.info("Payload del paquete TCP: "+Arrays.toString(udpRawPayload));
+                	byte[] udpRawPayload = udpDatagram.getRawPayload();
+                	int srcPort=udpDatagram.getSourcePort(); // para comprobar si es DNS
+                    byte[] arrayPacketData = inPkt.getPacketData();
+                	//log.info("Payload del paquete UDP: "+Arrays.toString(arrayPacketData));
+                	String udpRawPayDataISO = new String(udpRawPayload, ISO_8859_1);
+                	udpRawPayDataISO=udpRawPayDataISO.replaceAll("", ".");
+                	udpRawPayDataISO=udpRawPayDataISO.replaceAll("", ".");
+                	//log.info("udpRawPayload en String "+udpRawPayDataISO);               	
+                    youtubeTraffic = isYoutubeTraffic(arrayPacketData);
+                	match.setField(MatchType.NW_PROTO, (byte) 17); //UDP protocol id
+
+                    if(youtubeTraffic && srcPort==53){
+                    	direccionesServidoresDNSYoutube.add(srcIPaddr);
+                    	log.info("LIST YOUTUBE DNS: "+direccionesServidoresDNSYoutube);
+                    	log.info("Payload del paquete UDP: "+Arrays.toString(udpRawPayload));
+                    	log.info("En ISO sale: "+udpRawPayDataISO);
+                    	srcIPservidorVideoYoutube=parseoDNS(udpRawPayload);
+                    	if(!srcIPservidorVideoYoutubeList.contains(srcIPservidorVideoYoutube)){
+                    		srcIPservidorVideoYoutubeList.add(srcIPservidorVideoYoutube);
+                    	}
+                    }
                     VoIPTraffic = isVoIPTraffic(udpDatagram);
                 }
+                if(l4Datagram instanceof ICMP){
+                	log.info("Se está realizando un ping");
+                	icmpTraffic=true;
+                }
             }
+            
             /////
          // Set up the mapping: switch -> src MAC address -> incoming port
             if (this.mac_to_port_per_switch.get(incoming_node) == null) {
@@ -347,50 +350,43 @@ public class DissectorHandler implements IListenDataPacket {
             this.mac_to_port_per_switch.get(incoming_node).put(srcMAC_val, incoming_connector);
 
             NodeConnector dst_connector = this.mac_to_port_per_switch.get(incoming_node).get(dstMAC_val);
-
             
          // Do I know the destination MAC?
             if (dst_connector != null) {
 				List<Action> actions = new ArrayList<Action>();
-                actions.add(new Output(dst_connector));
-                if(webTraffic){
-                	webTraffic = false;
-                	if(contadorTraficoWeb==3 || contadorTraficoWeb==4){
-                		if(youtubeTraffic){
-                			contadorTraficoWeb=0;
-                			añadeFlujo=true;
-                        	youtubeTraffic = false;
-                        	log.info("Nuevo ToS para tráfico Youtube");
-                            actions.add(new SetNwTos(1)); 
-                		} else {
-                			añadeFlujo = false;
-                			floodPacket(inPkt);
-                		}
-                	} else if(contadorTraficoWeb==5){	
-                		if(youtubeTraffic){
-                			contadorTraficoWeb=0;
-                			añadeFlujo=true;
-                        	youtubeTraffic = false;
-                        	log.info("Nuevo ToS para tráfico Youtube");
-                            actions.add(new SetNwTos(1)); 
-                		} else {
-                			añadeFlujo = true;
-                			contadorTraficoWeb=0;
-                            actions.add(new SetNwTos(2)); 
-                		}	
-                	} else {
-                        añadeFlujo=false;
-                        floodPacket(inPkt);
-            		}
-                } else if (VoIPTraffic){
+                if(servidorVideoYoutube){
+        			servidorVideoYoutube=false;
+                	añadeFlujo=true;
+                	log.info("Nuevo ToS para tráfico Youtube");                	
+                	actions.add(new SetNwTos(8));
+                    
+                } else if(direccionesServidoresDNSYoutube.contains(srcIPaddr)){
+                	añadeFlujo=false;
+                	log.info("IP de servidor DNS Youtube; no añadir flujo");
+                	//log.info("Holaaaaaaaaaaaaaaaaaaaaa youtube miraver");
+                } else if(youtubeTraffic){
+                	añadeFlujo=false;
+                	youtubeTraffic=false;
+                	//log.info("Holaaaaaaaaaaaaaaaaaaaaa youtube miraver");
+                }else if(webTraffic){
+                	añadeFlujo=true;
+                	webTraffic=false;
+                	//actions.add(new SetNwTos(2));
+                }
+                else if (VoIPTraffic){
                 	añadeFlujo = true;
                 	VoIPTraffic = false;
-                	actions.add(new SetNwTos(3));    
+                	//actions.add(new SetNwTos(3));    
+                } else if(icmpTraffic){
+                	icmpTraffic=false;
+                	//actions.add(new SetNwTos(4));
+                	añadeFlujo=true;
                 } else {
-                	añadeFlujo = true;
+                	añadeFlujo = false;
                 }                
                 
                 if(añadeFlujo){
+                    actions.add(new Output(dst_connector));
 	                Flow f = new Flow(match, actions);
 	                añadeFlujo = false;
 	                // Modify the flow on the network node
@@ -401,144 +397,30 @@ public class DissectorHandler implements IListenDataPacket {
 	                            f, status.getDescription());
 	                    return PacketResult.IGNORED;
 	                }
-	                log.info("Installed flow {} in node {}",
-	                        f, incoming_node);
+	                log.info("Installed flow {} in node {}",f, incoming_node);
+	                try {
+	                    RawPacket destPkt = new RawPacket(inPkt);
+	                    destPkt.setOutgoingNodeConnector(dst_connector);
+	                    this.dataPacketService.transmitDataPacket(destPkt);
+	                    //log.info("Datos de paquete transmitido dentro de floodpacket: "+this.dataPacketService.decodeDataPacket(destPkt).toString());
+	                } catch (ConstructionException e2) {
+	                }
+                }
+                else{
+	                try {
+	                    RawPacket destPkt = new RawPacket(inPkt);
+	                    destPkt.setOutgoingNodeConnector(dst_connector);
+	                    this.dataPacketService.transmitDataPacket(destPkt);
+	                    //log.info("Datos de paquete transmitido dentro de floodpacket: "+this.dataPacketService.decodeDataPacket(destPkt).toString());
+	                } catch (ConstructionException e2) {
+	                }
                 }
 
             }
             else 
                 floodPacket(inPkt);
         }
-        /////////////////////////////////////////////////////////////
         
-        /*
-        // Use DataPacketService to decode the packet.
-        Packet pkt = this.dataPacketService.decodeDataPacket(inPkt);
-        
-        if (pkt instanceof Ethernet) {
-            Ethernet ethFrame = (Ethernet) pkt;
-            Object l3Pkt = ethFrame.getPayload();
-	        //
-            byte[] srcMAC = ((Ethernet)pkt).getSourceMACAddress();
-            byte[] dstMAC = ((Ethernet)pkt).getDestinationMACAddress();
-            long srcMAC_val = BitBufferHelper.toNumber(srcMAC);
-            long dstMAC_val = BitBufferHelper.toNumber(dstMAC);
-            //
-         
-            if (l3Pkt instanceof IPv4) {
-                IPv4 ipv4Pkt = (IPv4) l3Pkt;
-                InetAddress clientAddr = intToInetAddress(ipv4Pkt.getSourceAddress());
-                InetAddress dstAddr = intToInetAddress(ipv4Pkt.getDestinationAddress());
-                Object l4Datagram = ipv4Pkt.getPayload();
-                if (l4Datagram instanceof TCP) {
-                    TCP tcpDatagram = (TCP) l4Datagram;
-                    int clientPort = tcpDatagram.getSourcePort();
-                    int dstPort = tcpDatagram.getDestinationPort();
-
-                    if (publicInetAddress.equals(dstAddr) && dstPort == SERVICE_PORT) { 
-                        log.info("Received packet for load balanced service");
-                        
-                        // Select one of the two servers round robin.
-                        
-                        InetAddress serverInstanceAddr;
-                        byte[] serverInstanceMAC;
-                        NodeConnector egressConnector;
-                        
-                        // Synchronize in case there are two incoming requests at the same time.
-                        synchronized (this) {
-                            if (serverNumber == 0) {
-                                log.info("Server 1 is serving the request");
-                                serverInstanceAddr = server1Address;
-                                serverInstanceMAC = SERVER1_MAC;
-                                egressConnector = switchManager.getNodeConnector(node, SERVER1_CONNECTOR_NAME);
-                                serverNumber = 1;
-                            } else {
-                                log.info("Server 2 is serving the request");
-                                serverInstanceAddr = server2Address;
-                                serverInstanceMAC = SERVER2_MAC;
-                                egressConnector = switchManager.getNodeConnector(node, SERVER2_CONNECTOR_NAME);
-                                serverNumber = 0;
-                            }
-                        }
-                                  
-                        // Create flow table entry for further incoming packets
-                        
-                        // Match incoming packets of this TCP connection 
-                        // (4 tuple source IP, source port, destination IP, destination port)
-                        Match match = new Match();
-                        match.setField(MatchType.DL_TYPE, (short) 0x0800);  // IPv4 ethertype
-                        match.setField(MatchType.NW_PROTO, (byte) 6);       // TCP protocol id
-                        match.setField(MatchType.NW_SRC, clientAddr);
-                        match.setField(MatchType.NW_DST, dstAddr);
-                        match.setField(MatchType.TP_SRC, (short) clientPort);
-                        match.setField(MatchType.TP_DST, (short) dstPort);
-
-                        // List of actions applied to the packet
-                        List<Action> actions = new LinkedList<Action>();
-                        
-                        // Re-write destination IP to server instance IP
-                        actions.add(new SetNwDst(serverInstanceAddr));
-                        
-                        // Re-write destination MAC to server instance MAC
-                        actions.add(new SetDlDst(serverInstanceMAC));
-                        
-                        // Output packet on port to server instance
-                        actions.add(new Output(egressConnector));
-                        
-                        // Create the flow
-                        Flow flow = new Flow(match, actions);
-                        
-                        // Use FlowProgrammerService to program flow.
-                        Status status = flowProgrammerService.addFlow(node, flow);
-                        if (!status.isSuccess()) {
-                            log.error("Could not program flow: " + status.getDescription());
-                            return PacketResult.CONSUME;
-                        }
-                                               
-                        // Create flow table entry for response packets from server to client
-                        
-                        // Match outgoing packets of this TCP connection 
-                        match = new Match();
-                        match.setField(MatchType.DL_TYPE, (short) 0x0800); 
-                        match.setField(MatchType.NW_PROTO, (byte) 6);
-                        match.setField(MatchType.NW_SRC, serverInstanceAddr);
-                        match.setField(MatchType.NW_DST, clientAddr);
-                        match.setField(MatchType.TP_SRC, (short) dstPort);
-                        match.setField(MatchType.TP_DST, (short) clientPort);
-                        
-                        
-                        // Re-write the server instance IP address to the public IP address
-                        actions = new LinkedList<Action>();
-                        actions.add(new SetNwSrc(publicInetAddress));
-                        actions.add(new SetDlSrc(SERVICE_MAC));
-                        
-                        // Output to client port from which packet was received
-                        actions.add(new Output(ingressConnector));
-                        
-                        flow = new Flow(match, actions);
-                        status = flowProgrammerService.addFlow(node, flow);
-                        if (!status.isSuccess()) {
-                            log.error("Could not program flow: " + status.getDescription());
-                            return PacketResult.CONSUME;
-                        }
-                        
-                        // Forward initial packet to selected server
-                      
-                        log.trace("Reenviando paquete a " + serverInstanceAddr.toString() + " por el puerto " + egressConnector.getNodeConnectorIDString());
-                        ethFrame.setDestinationMACAddress(serverInstanceMAC);
-                        ipv4Pkt.setDestinationAddress(serverInstanceAddr);
-                        inPkt.setOutgoingNodeConnector(egressConnector);                       
-                        dataPacketService.transmitDataPacket(inPkt);
-                        return PacketResult.CONSUME;
-                    }
-                    else 
-                        floodPacket(inPkt);
-                    	
-                }
-            }
-        	floodPacket(inPkt);
-        	
-        }*/
         
         // We did not process the packet -> let someone else do the job.
         return PacketResult.IGNORED;
@@ -546,7 +428,9 @@ public class DissectorHandler implements IListenDataPacket {
     
     /**
      * Función que comprueba si el tráfico pertenece a un flujo de
-     * streaming de video enviado por Youtube
+     * streaming de video enviado por Youtube. Con esta función
+     * detectamos el servidor DNS que envía la dirección IP del
+     * servidor de video.
      * @param arrayPacketData: es el paquete de datos en el que
      * buscaremos el string "googlevideo"
      * @return Nos devuelve una booleana indicando si el paquete es
@@ -555,18 +439,96 @@ public class DissectorHandler implements IListenDataPacket {
     private boolean isYoutubeTraffic(byte[] arrayPacketData){
     	
     	boolean youtubeTraffic = false;
-    	String datosTCP = new String(arrayPacketData, UTF_8);
-        //log.info("Los datos del paquete son en UTF-8: "+datosDNS);
-        if(datosTCP.contains("googlevideo")){
+    	String datosUDP = new String(arrayPacketData, UTF_8);
+        //log.info("Los datos del paquete son en UTF-8: "+datosUDP);
+        if(datosUDP.contains("googlevideo")){
         	// ...añadir el ToS más adelante en el flujo en caso de "true"
+        	log.info("Es Youtube");
         	youtubeTraffic=true;
         }
     	return youtubeTraffic;
     }
     /**
-     * 
-     * @param udpPacket
-     * @return
+     * Función encargada de parsear los paquetes DNS con el objeto
+     * de encontrar la dirección IP del servidor encuadrada dentro
+     * de las respuestas de este tipo de paquetes.
+     * @param udpRawPayload: paquete UDP en el que se encuentra
+     * incluido el paquete DNS
+     * @return srcIPservidorVideoYoutube: dirección IP del servidor.
+     */
+    private InetAddress parseoDNS(byte[] udpRawPayload){
+    	String udpRawPayDataISO = new String(udpRawPayload, ISO_8859_1);
+    	byte[] numPeticiones= new byte[2];
+    	byte[] numRespuestas = new byte[2];
+    	byte[] Type;
+    	byte[] Class;
+    	boolean urlencontrada=false;
+    	int longitudPeticiones=12;
+    	int longitudRespuestas=0;
+    	int longitudURL=0;
+    	numPeticiones[0]=udpRawPayload[4];
+    	numPeticiones[1]=udpRawPayload[5];
+    	numRespuestas[0]=udpRawPayload[6];
+    	numRespuestas[1]=udpRawPayload[7];
+    	int numQueries=0;
+    	int numAnswers=0;
+    	numQueries=numPeticiones[1];
+    	numAnswers=numRespuestas[1];
+    	log.info("Numero de peticiones: "+numQueries+" numero respuestas: "+numAnswers);
+    	if(numAnswers!=0){
+    		for(int j=0;j<numQueries;j++){
+	    		urlencontrada=false;
+    			for(int i=longitudPeticiones;i<udpRawPayload.length-2;i++){ // La i cambia por si encontramos una petición y hay más para que se incremente hasta la siguiente
+    	    		if(udpRawPayload[i+1]==0 && !urlencontrada){
+    	    			log.info("Primer 0 encontrado");
+    	    			if(udpRawPayload[i+2]==0){
+    	    				log.info("Segundo 0 encontrado");
+    	    				longitudPeticiones=i+8;
+    	    				log.info("número de petición "+j);
+    	    				j++;
+    	    				urlVideoYoutube=udpRawPayDataISO.substring(13, i+1);
+    	    				longitudURL=urlVideoYoutube.length();
+    	    				urlencontrada=true;
+    	    				log.info("La url es: "+urlVideoYoutube+" y la longitud es "+longitudURL+" y vamos por el byte: "+longitudPeticiones);
+    	    				//urlencontrada=true;
+    	    			}
+    	    		}
+    	    	}
+    		}
+			longitudRespuestas=longitudPeticiones;
+    		for(int j=0; j<numAnswers;j++){
+    			Type = new byte[numAnswers];
+    			Type[j]=udpRawPayload[longitudRespuestas+1];
+    			log.info("Type: "+Type[j]);
+    			Class = new byte[numAnswers];
+    			Class[j]=udpRawPayload[longitudRespuestas+3];
+    			log.info("Class: "+Class[j]);
+    			if(Type[j]==5){
+    				longitudRespuestas=longitudRespuestas+14+(longitudURL-17);// para pasar a la siguiente respuesta, El primary Name tiene 17 bytes menos parece
+    			}
+    			if(Type[j]==1){
+    				byte[] ipAddr=new byte[4];
+    				ipAddr[0]=udpRawPayload[longitudRespuestas+10];
+    				ipAddr[1]=udpRawPayload[longitudRespuestas+11];
+    				ipAddr[2]=udpRawPayload[longitudRespuestas+12];
+    				ipAddr[3]=udpRawPayload[longitudRespuestas+13];
+    				try {
+						srcIPservidorVideoYoutube = srcIPservidorVideoYoutube.getByAddress(ipAddr);
+						log.info("La IP que hemos conseguido hasta ahora es: "+srcIPservidorVideoYoutube);
+					} catch (UnknownHostException e) {
+						e.printStackTrace();
+					}
+    			}
+			}
+    	}
+    	log.info("IP del servidor de Video Youtube encontrada: "+srcIPservidorVideoYoutube);
+    	return srcIPservidorVideoYoutube;
+    }
+    
+    /**
+     * Función que comprueba si es tráfico VoIP
+     * @param udpPacket paquete udp que vamos a analizar
+     * @return devolvemos una booleana que informará si el paquete es VoIP o no
      */
     private boolean isVoIPTraffic(UDP udpPacket){
     	
